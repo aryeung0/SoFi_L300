@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="snowflake-source" content="cortex-agent-authored">
+<title>SoFi Finance AI Champions — Level 300 Hands-On Guide</title>
+<script type="application/json" id="snowflake-report-metadata">
+{
+  "generated": "2026-09-29",
+  "intent": "Styled participant guide for the SoFi Finance AI Champions Level 300 workshop (Agents & multi-agent solutions for business users). Audience holds read-only roles and partners with data engineering; the session teaches them to write agent requests engineers can build from.",
+  "dataSources": [
+    { "type": "script", "path": "00_L300_Setup.sql", "notes": "Provisions SOFI_FINANCE_L300.AGENTS in each lab account via DataOps Live. All data synthetic and deterministic." }
+  ],
+  "sections": [
+    { "id": "agenda", "title": "Session Agenda" },
+    { "id": "overview", "title": "What This Workshop Builds" },
+    { "id": "architecture", "title": "Solution Architecture" },
+    { "id": "objects", "title": "What's Already In Your Account" },
+    { "id": "anatomy", "title": "Step 1: Anatomy of an Agent" },
+    { "id": "spot-the-gap", "title": "Step 2: Exercise 1, Spot the Gap",
+      "producerNotes": "Expected answers verified 2026-09-28 on uob23116 via DATA_AGENT_RUN. Q3 2026 ground truth: 26 escalations / 59 in-scope = 44.1%. PR-260017 = Escalate (vendor mismatch)." },
+    { "id": "inside", "title": "Step 3: Look Inside the Good Agent" },
+    { "id": "multi-agent", "title": "Step 4: Multi-Agent and CoWork" },
+    { "id": "rewrite", "title": "Step 5: Exercise 2, Fix the Vague Request" },
+    { "id": "brief", "title": "Step 6: Exercise 3, Write Your Agent Request Brief" },
+    { "id": "codify", "title": "Codify and Share Your Knowledge" },
+    { "id": "next-steps", "title": "Recap & What's Next" }
+  ]
+}
+</script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { color-scheme: light dark; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: light-dark(#16222c, #dbe6ee);
+    background: light-dark(hsl(201, 25%, 97%), hsl(205, 30%, 9%));
+    line-height: 1.6;
+}
+
+/* Header */
+.header {
+    background: linear-gradient(90deg, #00A2C7 0%, #3FBBDA 42%, #DFF4FA 78%, #ffffff 100%);
+    color: white; padding: 22px 40px 20px; position: relative; overflow: hidden;
+}
+.header::before {
+    content: ''; position: absolute; top: -50%; right: 18%; width: 460px; height: 460px;
+    background: radial-gradient(circle, rgba(255,255,255,0.20) 0%, transparent 70%); border-radius: 50%;
+}
+.header::after {
+    content: ''; position: absolute; bottom: -30%; left: -5%; width: 360px; height: 360px;
+    background: radial-gradient(circle, rgba(255,255,255,0.10) 0%, transparent 70%); border-radius: 50%;
+}
+.header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; position: relative; letter-spacing: -0.01em; }
+.header .subtitle { font-size: 15px; color: #eafcff; margin-bottom: 6px; position: relative; }
+.header .project-label { font-size: 13px; color: hsl(195, 60%, 92%); margin-bottom: 12px; position: relative; }
+.header .chips { display: flex; gap: 10px; flex-wrap: wrap; position: relative; }
+.header .chip { background: #00A2C7; padding: 4px 12px; border-radius: 6px; font-size: 13px; white-space: nowrap; border: 1px solid rgba(255,255,255,0.25); }
+
+/* Nav */
+.nav-bar {
+    background: light-dark(#fff, #101b26); border-bottom: 1px solid light-dark(hsl(201,20%,88%), hsl(205,20%,20%));
+    padding: 0 44px; position: sticky; top: 0; z-index: 100;
+    display: flex; gap: 0; overflow-x: auto;
+}
+.nav-bar a {
+    text-decoration: none; color: light-dark(hsl(201,15%,44%), hsl(201,15%,65%)); font-size: 13.5px; font-weight: 500;
+    padding: 12px 16px; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s;
+}
+.nav-bar a:hover { color: light-dark(#0A1F33, #dbe6ee); }
+.nav-bar a.active { color: #0E6BA8; border-bottom-color: #29B5E8; }
+
+/* Content */
+.content { max-width: 1160px; margin: 0 auto; padding: 0 clamp(16px,4vw,32px) 48px; }
+.section { margin-bottom: 52px; scroll-margin-top: 58px; }
+.section:first-child { margin-top: 36px; }
+.section h2 { font-size: 24px; font-weight: 700; color: light-dark(#0A1F33, #eaf3f8); border-bottom: 3px solid #29B5E8; padding-bottom: 8px; margin-bottom: 20px; letter-spacing: -0.01em; }
+.section h3 { font-size: 19px; font-weight: 600; color: light-dark(hsl(201,15%,15%), hsl(201,15%,88%)); margin: 24px 0 10px; }
+.section h4 { font-size: 16px; font-weight: 600; color: light-dark(hsl(201,15%,20%), hsl(201,15%,85%)); margin: 18px 0 8px; }
+.section p { font-size: 16px; color: light-dark(hsl(201,15%,40%), hsl(201,15%,68%)); margin-bottom: 14px; max-width: 900px; }
+.section ol, .section ul { font-size: 16px; color: light-dark(hsl(201,15%,40%), hsl(201,15%,68%)); margin-bottom: 14px; padding-left: 26px; max-width: 900px; }
+.section li { margin-bottom: 8px; }
+code { font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace; font-size: 0.9em; background: light-dark(hsl(201,20%,93%), hsl(205,20%,18%)); padding: 1px 5px; border-radius: 4px; }
+
+/* Metrics */
+.metrics-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
+.metric-card { background: light-dark(#fff, #16222c); border: 1px solid light-dark(hsl(201,20%,88%), hsl(205,20%,22%)); border-radius: 10px; padding: 18px 22px; flex: 1; min-width: 170px; }
+.metric-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: light-dark(hsl(201,15%,44%), hsl(201,15%,65%)); margin-bottom: 2px; font-weight: 600; }
+.metric-value { font-size: 26px; font-weight: 800; color: light-dark(#0A1F33, #eaf3f8); }
+.metric-sub { font-size: 13px; color: light-dark(hsl(201,15%,57%), hsl(201,15%,58%)); margin-top: 2px; }
+
+/* Architecture diagram */
+.diagram { background: light-dark(#fff, #101b26); border: 1px solid light-dark(hsl(201,20%,88%), hsl(205,20%,22%)); border-radius: 10px; padding: 26px 20px; overflow-x: auto; }
+.diagram-row { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; min-width: 860px; justify-content: center; }
+.diagram-col { display: flex; flex-direction: column; gap: 10px; }
+.diagram-node { border-radius: 8px; padding: 12px 16px; font-size: 13px; font-weight: 600; text-align: center; min-width: 140px; border: 2px solid; }
+.diagram-node small { display: block; font-weight: 400; font-size: 11.5px; margin-top: 3px; opacity: .85; }
+.dn-source { background: hsl(202,60%,94%); border-color: #29B5E8; color: #0A1F33; }
+.dn-foundation { background: #eafbf1; border-color: #2fa86a; color: #14532d; }
+.dn-semantic { background: #f2eefe; border-color: #7A5CFA; color: #3d2a8f; }
+.dn-consume { background: #fef4e6; border-color: #e8912a; color: #7a4a10; }
+.diagram-arrow { font-size: 20px; color: light-dark(hsl(201,15%,55%), hsl(201,15%,55%)); flex-shrink: 0; }
+.diagram-caption { font-size: 14px; color: light-dark(hsl(201,15%,44%), hsl(201,15%,65%)); margin-top: 12px; text-align: center; }
+
+/* Brand lockup (top-right) */
+.brand-lockup { position: absolute; top: 18px; right: 32px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 2; }
+.brand-lockup img { display: block; border-radius: 5px; box-shadow: 0 1px 4px rgba(10,31,51,0.18); }
+.brand-lockup .logo-sofi { height: 22px; width: auto; }
+.brand-lockup .logo-snowflake { height: 22px; width: auto; }
+@media (max-width: 720px) {
+    .brand-lockup { position: static; align-items: flex-start; margin-top: 14px; }
+}
+
+/* Notes */
+.note, .note-green, .note-amber, .note-purple { padding: 14px 18px; border-radius: 0 8px 8px 0; font-size: 15px; margin-bottom: 20px; }
+.note { background: light-dark(hsl(202,45%,95%), hsl(205,40%,14%)); border-left: 4px solid #29B5E8; color: light-dark(#0E4E68, #bfe6f6); }
+.note-green { background: light-dark(#f0fdf4, hsl(150,35%,12%)); border-left: 4px solid #22c55e; color: light-dark(#166534, #a9e6c3); }
+.note-amber { background: light-dark(#fef4e6, hsl(30,45%,12%)); border-left: 4px solid #e8912a; color: light-dark(#7a4a10, #f0c98a); }
+.note-purple { background: light-dark(#f5f2fe, hsl(255,30%,14%)); border-left: 4px solid #7A5CFA; color: light-dark(#3d2a8f, #cfc3fb); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 15px; }
+th { background: light-dark(hsl(201,20%,93%), hsl(205,20%,16%)); font-weight: 600; text-align: left; padding: 10px 14px; border-bottom: 2px solid light-dark(hsl(201,20%,88%), hsl(205,20%,24%)); }
+td { padding: 9px 14px; border-bottom: 1px solid light-dark(hsl(201,20%,93%), hsl(205,20%,18%)); vertical-align: top; }
+tr:hover td { background: light-dark(hsl(201,20%,97%), hsl(205,20%,14%)); }
+tr.sub-row td:first-child { padding-left: 30px; font-weight: 400; }
+
+/* Stop cards */
+.stop { border: 1px solid light-dark(hsl(201,20%,88%), hsl(205,20%,22%)); border-radius: 10px; padding: 22px 26px; margin: 18px 0; background: light-dark(#fff, #16222c); }
+.stop-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.stop-num { background: #29B5E8; color: #04202b; font-weight: 700; font-size: 14px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stop-title { font-size: 17px; font-weight: 600; color: light-dark(#0A1F33, #eaf3f8); }
+.stop-time { font-size: 12.5px; color: light-dark(hsl(201,15%,50%), hsl(201,15%,62%)); margin-left: auto; }
+.stop-tag { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.tag-coco { background: hsl(202,45%,92%); color: #0E6BA8; }
+.tag-setup { background: #eafbf1; color: #15803d; }
+.tag-ai { background: #f2eefe; color: #3d2a8f; }
+.tag-cowork { background: #fef4e6; color: #7a4a10; }
+.tag-exercise { background: #fde7ef; color: #9d174d; }
+
+/* Code blocks */
+.code-label { margin-top: 14px; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: light-dark(hsl(201,15%,44%), hsl(201,15%,65%)); font-weight: 700; }
+.code-block { background: #0A1F33; color: hsl(201,25%,88%); padding: 14px 18px; border-radius: 8px; margin-top: 6px; font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace; font-size: 13px; line-height: 1.7; overflow-x: auto; white-space: pre; }
+.prompt-block { background: light-dark(hsl(202,45%,96%), hsl(205,35%,13%)); border: 1px dashed #29B5E8; color: light-dark(#0A1F33, #dbe6ee); padding: 12px 16px; border-radius: 8px; margin-top: 6px; font-size: 14.5px; }
+
+/* Side-by-side comparison */
+.compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0 18px; }
+.compare-card { border-radius: 10px; padding: 16px 18px; border: 2px solid; font-size: 14.5px; }
+.compare-card h4 { margin: 0 0 8px; font-size: 15px; }
+.compare-card p { font-size: 14.5px; margin-bottom: 8px; }
+.cc-bad { border-color: #e8912a; background: light-dark(#fffaf3, hsl(30,35%,11%)); }
+.cc-good { border-color: #22c55e; background: light-dark(#f6fef9, hsl(150,30%,10%)); }
+.verdict { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.v-bad { background: #fde7c8; color: #7a4a10; }
+.v-good { background: #d7f5e3; color: #166534; }
+
+/* Reveal (details/summary) */
+details.reveal { margin: 12px 0 16px; border: 1px solid light-dark(hsl(201,20%,86%), hsl(205,20%,24%)); border-radius: 8px; background: light-dark(#fff, #121e29); }
+details.reveal > summary { cursor: pointer; padding: 10px 16px; font-weight: 600; font-size: 14.5px; color: light-dark(#0E6BA8, #7cc9ec); list-style: none; }
+details.reveal > summary::-webkit-details-marker { display: none; }
+details.reveal > summary::before { content: '▸ '; }
+details.reveal[open] > summary::before { content: '▾ '; }
+details.reveal > div { padding: 4px 18px 14px; }
+
+/* Anatomy grid */
+.anatomy { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 14px 0 18px; }
+.anatomy-card { border: 1px solid light-dark(hsl(201,20%,88%), hsl(205,20%,22%)); border-radius: 10px; padding: 14px 16px; background: light-dark(hsl(201,25%,98%), hsl(205,25%,12%)); }
+.anatomy-card .a-build { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 700; color: #0E6BA8; }
+.anatomy-card .a-title { font-weight: 700; font-size: 15.5px; color: light-dark(#0A1F33, #eaf3f8); margin: 2px 0 6px; }
+.anatomy-card .a-you { font-size: 14px; color: light-dark(hsl(201,15%,36%), hsl(201,15%,72%)); }
+.anatomy-card .a-you strong { color: #9d174d; }
+
+/* Footer */
+.footer { text-align: center; padding: 24px; font-size: 14px; color: light-dark(hsl(201,15%,57%), hsl(201,15%,55%)); border-top: 1px solid light-dark(hsl(201,20%,88%), hsl(205,20%,22%)); margin-top: 40px; }
+
+img, svg { max-width: 100%; height: auto; }
+
+@media print {
+    .nav-bar { display: none; }
+    .section { break-inside: avoid; }
+    details.reveal { border: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Level 300: Hands-On Guide</h1>
+    <div class="subtitle">SoFi Finance AI Champions Workshop: Agents &amp; Multi-Agent Solutions for Business Teams</div>
+    <div class="project-label">Snowflake Solutions Engineering, Hands-On Session Playbook</div>
+    <div class="chips">
+        <span class="chip"><strong>Program:</strong> SoFi Finance AI Champions</span>
+        <span class="chip"><strong>Facilitators:</strong> Bala Krishnamoorthy &amp; Arnold Yeung, Snowflake</span>
+        <span class="chip"><strong>Tools:</strong> CoWork + Agents + CoCo (optional)</span>
+        <span class="chip"><strong>Output:</strong> Your Agent Request Brief</span>
+    </div>
+    <div class="brand-lockup">
+        <img class="logo-sofi" src="assets/logos/sofi_logo.png" alt="SoFi logo">
+        <img class="logo-snowflake" src="assets/logos/snowflake_logo.png" alt="Snowflake logo">
+    </div>
+</div>
+
+<div class="nav-bar" id="navbar">
+    <a href="#agenda">Agenda</a>
+    <a href="#overview">Overview</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#objects">What's In Your Account</a>
+    <a href="#anatomy">Anatomy</a>
+    <a href="#spot-the-gap">Spot the Gap</a>
+    <a href="#inside">Look Inside</a>
+    <a href="#multi-agent">Multi-Agent</a>
+    <a href="#rewrite">Fix the Request</a>
+    <a href="#brief">Your Brief</a>
+    <a href="#codify">Codify &amp; Share</a>
+    <a href="#next-steps">Recap &amp; Next Steps</a>
+</div>
+
+<div class="content">
+
+<div class="section" id="agenda">
+    <h2>Session Agenda</h2>
+    <p>Wednesday, September 30, 12:00 to 1:00 PM PT. Three short exercises carry the session: you'll grade an agent, rewrite a weak request, and draft a brief for your own workflow.</p>
+    <div class="table-wrap">
+        <table>
+            <tr><th>Time</th><th>Block</th><th>You'll</th></tr>
+            <tr><td>12:00</td><td>Welcome &amp; where L300 fits</td><td>Recap L100 (consumer) and L200 (AI Functions); today, <strong>the specifier</strong></td></tr>
+            <tr><td>12:05</td><td>Step 1: Anatomy of an agent</td><td>See the six parts of an agent, and which ones need <em>your</em> knowledge</td></tr>
+            <tr><td>12:10</td><td>Step 2: Exercise 1, Spot the Gap</td><td>Ask two agents the same questions, then grade them on the scorecard</td></tr>
+            <tr><td>12:20</td><td>Step 3: Look inside</td><td>Trace each correct answer back to a definition, rule, or document</td></tr>
+            <tr><td>12:27</td><td>Step 4: Multi-agent &amp; CoWork</td><td>One coordinator over Procurement + Treasury specialists; sharing and automations</td></tr>
+            <tr><td>12:33</td><td>Step 5: Exercise 2, Fix the Vague Request</td><td>Rewrite a one-line request so an engineer could build from it</td></tr>
+            <tr><td>12:40</td><td>Step 6: Exercise 3, Your Agent Request Brief</td><td>Draft a brief for a workflow you own; test a golden question live</td></tr>
+            <tr><td>12:53</td><td>Share-out &amp; next steps</td><td>Two briefs read aloud; the facilitator plays the data engineer</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="section" id="overview">
+    <h2>What This Workshop Builds</h2>
+    <p>Level 100 showed what a well-configured AI stack feels like as a <strong>consumer</strong>. Level 200 turned documents and audio into tables with AI Functions. Level 300 is about the step in between: <strong>defining what an agent should know and do</strong>, so your data engineering partners can build it right the first time.</p>
+    <p>You won't write agent code today. You'll use CoWork to see what agents can do, examine what makes one agent trustworthy and another confidently wrong, and leave with an <strong>Agent Request Brief</strong> for a workflow you own: the definitions, rules, sources, golden questions, and guardrails a data engineer needs.</p>
+
+    <div class="metrics-row">
+        <div class="metric-card"><div class="metric-label">Agents</div><div class="metric-value">4</div><div class="metric-sub">Basic vs well-specified Procurement, Treasury, and a Finance coordinator</div></div>
+        <div class="metric-card"><div class="metric-label">Use Cases</div><div class="metric-value">2</div><div class="metric-sub">Coupa PR vs Ironclad contract review; daily cash anomaly screening</div></div>
+        <div class="metric-card"><div class="metric-label">Exercises</div><div class="metric-value">3</div><div class="metric-sub">Spot the gap, fix the request, write your brief</div></div>
+        <div class="metric-card"><div class="metric-label">Access Needed</div><div class="metric-value">Read-only</div><div class="metric-sub">Everything works in CoWork; CoCo is an optional accelerator</div></div>
+    </div>
+
+    <div class="note">
+        <strong>Prerequisites:</strong> Your Snowflake lab account (same login as Level 100/200), Chrome or Edge. No SQL or coding required. A few steps show optional SQL or CoCo shortcuts; every step has a no-code path.
+    </div>
+</div>
+
+<div class="section" id="architecture">
+    <h2>Solution Architecture</h2>
+    <p>Two specialist agents each own one Finance domain. A coordinator agent inherits both specialists' tools and routes each question to the right one. Everything is published to CoWork, where you'll use it.</p>
+
+    <div class="diagram">
+        <div class="diagram-row">
+            <div class="diagram-col">
+                <div class="diagram-node dn-source">Coupa requisitions<small>420 PRs, Oct 2025 to Sep 2026</small></div>
+                <div class="diagram-node dn-source">Ironclad contracts<small>16 MSAs &amp; addendums</small></div>
+                <div class="diagram-node dn-source">Policy &amp; clauses<small>Procurement Review Policy</small></div>
+                <div class="diagram-node dn-source">Daily cash balances<small>4 legal entities</small></div>
+            </div>
+            <div class="diagram-arrow">&rarr;</div>
+            <div class="diagram-col">
+                <div class="diagram-node dn-foundation">Decision table<small>5 contract-match checks</small></div>
+                <div class="diagram-node dn-foundation">Semantic Views<small>definitions, synonyms, metrics</small></div>
+                <div class="diagram-node dn-foundation">Cortex Search<small>policy &amp; contract text</small></div>
+            </div>
+            <div class="diagram-arrow">&rarr;</div>
+            <div class="diagram-col">
+                <div class="diagram-node dn-semantic">Procurement Review Assistant<small>specialist agent</small></div>
+                <div class="diagram-node dn-semantic">Treasury Liquidity Monitor<small>specialist agent</small></div>
+            </div>
+            <div class="diagram-arrow">&rarr;</div>
+            <div class="diagram-node dn-semantic">Finance Assistant<small>coordinator (multi-agent)</small></div>
+            <div class="diagram-arrow">&rarr;</div>
+            <div class="diagram-node dn-consume">CoWork<small>ask, chart, share,<br>automate</small></div>
+        </div>
+        <div class="diagram-caption">The green layer is where Finance knowledge lives. It's also the layer an engineer can't build without you.</div>
+    </div>
+</div>
+
+<div class="section" id="objects">
+    <h2>What's Already In Your Account</h2>
+    <p>Your facilitator provisioned this in your lab account before the session with Snowflake's DataOps Live pipeline. All data is synthetic, and all vendor names are fictitious.</p>
+    <div class="table-wrap">
+        <table>
+            <tr><th>Object</th><th>Name</th><th>What It Is</th></tr>
+            <tr><td><strong>Role</strong></td><td><code>FINANCE_HOL_ADMIN</code></td><td>Your permissions (same role as L100/L200)</td></tr>
+            <tr><td><strong>Warehouse</strong></td><td><code>FINANCE_HOL_WH</code></td><td>Compute for agent queries (auto-suspends)</td></tr>
+            <tr><td><strong>Database.Schema</strong></td><td><code>SOFI_FINANCE_L300.AGENTS</code></td><td>Standalone; no dependency on L100/L200 data</td></tr>
+            <tr class="sub-row"><td>Tables</td><td><code>REQUISITIONS</code>, <code>CONTRACTS</code>, <code>VENDORS</code>, <code>FINANCE_DOCUMENTS</code>, <code>DAILY_CASH_BALANCES</code></td><td>The raw data</td></tr>
+            <tr class="sub-row"><td>Views</td><td><code>REQUISITION_CONTRACT_CHECK</code>, <code>CASH_BALANCE_MONITOR</code></td><td>Business rules turned into columns</td></tr>
+            <tr class="sub-row"><td>Semantic Views</td><td><code>PROCUREMENT_SV_BASIC</code>, <code>PROCUREMENT_SV</code>, <code>TREASURY_SV</code></td><td>Basic = raw columns only. Full = definitions, synonyms, metrics.</td></tr>
+            <tr class="sub-row"><td>Search Service</td><td><code>FINANCE_DOCS_SEARCH</code></td><td>Procurement Review Policy + contract clauses</td></tr>
+            <tr class="sub-row"><td>Custom Tool</td><td><code>CHECK_REQUISITION</code></td><td>Runs the five checks on one PR, returns PASS/FAIL per check</td></tr>
+            <tr><td><strong>Agents (in CoWork)</strong></td><td>Procurement Agent (Basic)</td><td>Built from the one-line request: <em>"Build an agent for procurement data."</em></td></tr>
+            <tr class="sub-row"><td></td><td>Procurement Review Assistant</td><td>Same data, built from a complete Agent Request Brief</td></tr>
+            <tr class="sub-row"><td></td><td>Treasury Liquidity Monitor</td><td>Daily balances with a statistical outlier screen</td></tr>
+            <tr class="sub-row"><td></td><td>Finance Assistant (Multi-Agent)</td><td>Coordinator over both specialists</td></tr>
+        </table>
+    </div>
+
+    <div class="stop">
+        <div class="stop-header"><span class="stop-num">0</span><span class="stop-title">Get Ready</span><span class="stop-tag tag-setup">Setup</span><span class="stop-time">before 12:00</span></div>
+        <ol>
+            <li>Log in to Snowsight at the URL from your welcome email.</li>
+            <li>Click your <strong>user avatar</strong> (bottom-left) &rarr; <strong>Switch Role</strong> &rarr; <strong>FINANCE_HOL_ADMIN</strong>.</li>
+            <li>Open <strong>AI &amp; ML &rarr; Snowflake CoWork</strong> in a second browser tab. You'll switch between agents with the agent picker.</li>
+            <li>Open the <strong>scorecard</strong> link your facilitator posts in chat. You'll log answers there in Exercise 1.</li>
+            <li>Download the <a href="assets/templates/L300_Agent_Request_Brief_Template.md" download="L300_Agent_Request_Brief_Template.md">Agent Request Brief template</a> for Exercise 3.</li>
+        </ol>
+    </div>
+</div>
+
+<div class="section" id="anatomy">
+    <div class="stop">
+        <div class="stop-header"><span class="stop-num">1</span><span class="stop-title">Anatomy of an Agent</span><span class="stop-tag tag-setup">Context</span><span class="stop-time">5 min</span></div>
+        <p>A Cortex Agent is a planner (an LLM) plus a set of <strong>tools</strong> it can call, plus <strong>instructions</strong> that tell it how to behave. Engineers build every part, but most parts are only as good as the business knowledge that went into them.</p>
+        <div class="anatomy">
+            <div class="anatomy-card"><div class="a-build">Engineer builds</div><div class="a-title">Semantic View</div><div class="a-you">The agent's business dictionary. <strong>You supply:</strong> metric definitions, synonyms ("PR" = requisition), which field is authoritative, fiscal calendar.</div></div>
+            <div class="anatomy-card"><div class="a-build">Engineer builds</div><div class="a-title">Cortex Search</div><div class="a-you">Finds answers in documents. <strong>You supply:</strong> which documents are the source of truth, and which are stale or superseded.</div></div>
+            <div class="anatomy-card"><div class="a-build">Engineer builds</div><div class="a-title">Custom tools</div><div class="a-you">Deterministic checks and actions. <strong>You supply:</strong> the rules as a decision table: condition, outcome, owner.</div></div>
+            <div class="anatomy-card"><div class="a-build">Engineer builds</div><div class="a-title">Instructions</div><div class="a-you">How the agent plans and answers. <strong>You supply:</strong> who uses it, what a good answer looks like, what it must never do.</div></div>
+            <div class="anatomy-card"><div class="a-build">Engineer builds</div><div class="a-title">Multi-agent routing</div><div class="a-you">Which specialist handles what. <strong>You supply:</strong> domain boundaries and who owns each domain.</div></div>
+            <div class="anatomy-card"><div class="a-build">Engineer builds</div><div class="a-title">Evaluation</div><div class="a-you">How we know it works. <strong>You supply:</strong> golden questions <em>with the expected answer</em> and how to verify it.</div></div>
+        </div>
+        <p><strong>Try it (optional):</strong> in Snowsight go to <strong>AI &amp; ML &rarr; Agents</strong> and open <strong>PROCUREMENT_AGENT</strong>. Click through Tools and Orchestration. Every instruction you see there came from a sentence in a business request.</p>
+    </div>
+</div>
+
+<div class="section" id="spot-the-gap">
+    <div class="stop">
+        <div class="stop-header"><span class="stop-num">2</span><span class="stop-title">Exercise 1: Spot the Gap</span><span class="stop-tag tag-exercise">Exercise</span><span class="stop-tag tag-cowork">CoWork</span><span class="stop-time">10 min</span></div>
+        <p>Two agents, same data, same model. One was built from a one-line request; the other from a complete brief. Ask each the three questions below. For each answer, mark the scorecard <strong>Correct / Wrong / Hedged</strong> and write one line on <em>why</em>.</p>
+        <ol>
+            <li>In CoWork, choose <strong>Procurement Agent (Basic)</strong> from the agent picker and ask the three questions.</li>
+            <li>Start a new chat, choose <strong>Procurement Review Assistant</strong>, and ask the same three.</li>
+            <li>Log both on the scorecard before you open the reveals below.</li>
+        </ol>
+        <div class="code-label">The three questions</div>
+        <div class="prompt-block">Q1. What was our requisition escalation rate in Q3 2026, and what were the main reasons for escalation?</div>
+        <div class="prompt-block">Q2. Should PR-260017 be escalated?</div>
+        <div class="prompt-block">Q3. What does "fully executed" mean in our review policy, and does a pending addendum count toward authorized value?</div>
+
+        <details class="reveal">
+            <summary>Reveal: what the two agents said in our test run</summary>
+            <div>
+                <p style="margin-top:8px;">Agent wording varies run to run. The <em>pattern</em> below is what to look for.</p>
+                <h4>Q1: escalation rate</h4>
+                <div class="compare">
+                    <div class="compare-card cc-bad"><span class="verdict v-bad">Hedged</span><h4>Basic</h4><p>"I can't answer this from the available data. There's no concept of requisition escalation in it." It then asks you to define escalation.</p></div>
+                    <div class="compare-card cc-good"><span class="verdict v-good">Correct</span><h4>Well-specified</h4><p>"<strong>44.1%</strong>: 26 of the 59 in-scope requisitions (&ge; $100K)." Leading reason: contract not fully executed (14). Routing: Tier 1 to the Director of Procurement.</p></div>
+                </div>
+                <h4>Q2: a single PR</h4>
+                <div class="compare">
+                    <div class="compare-card cc-bad"><span class="verdict v-bad">Wrong, confidently</span><h4>Basic</h4><p>"From a contract-compliance standpoint, PR-260017 is clean and does not need escalation... the vendor on the requisition matches the vendor on the contract." It then invents an aging rule (141 days old) that isn't in any policy.</p></div>
+                    <div class="compare-card cc-good"><span class="verdict v-good">Correct</span><h4>Well-specified</h4><p>"Yes, escalate." Vendor match <strong>FAIL</strong>: the PR names Redwood Office Supply, but contract C-1003 belongs to a different supplier. Cites Policy &sect;3 and routes to the Procurement queue.</p></div>
+                </div>
+                <h4>Q3: a definition</h4>
+                <div class="compare">
+                    <div class="compare-card cc-bad"><span class="verdict v-bad">Can't answer</span><h4>Basic</h4><p>It has no documents. At best it shows the <code>status</code> column's values and guesses.</p></div>
+                    <div class="compare-card cc-good"><span class="verdict v-good">Correct</span><h4>Well-specified</h4><p>Signed by both parties; "Pending Signature" is not executed. Pending addendums do <strong>not</strong> count; authorized value = MSA + executed addendums only. Cites Policy &sect;3.</p></div>
+                </div>
+            </div>
+        </details>
+
+        <div class="note-amber"><strong>The lesson:</strong> "I don't know" is the <em>good</em> failure. The dangerous one is Q2: a fluent, confident, wrong answer, produced because nobody told the agent which vendor field is authoritative or what the escalation rules are. Every gap you found maps to a line missing from the one-line request.</div>
+        <div class="note-green"><strong>Discuss (2 min):</strong> For each wrong or hedged answer, which of the six anatomy parts was missing? (Q1: a definition and a metric. Q2: an authoritative field and a decision rule. Q3: a source document.)</div>
+    </div>
+</div>
+
+<div class="section" id="inside">
+    <div class="stop">
+        <div class="stop-header"><span class="stop-num">3</span><span class="stop-title">Look Inside the Good Agent</span><span class="stop-tag tag-ai">Agent Build</span><span class="stop-time">7 min</span></div>
+        <p>Each correct answer traces back to one piece of Finance knowledge that someone wrote down. Here's where each one lives.</p>
+        <div class="table-wrap">
+            <table>
+                <tr><th>Business statement (what Finance wrote)</th><th>Where the engineer put it</th><th>Answer it fixed</th></tr>
+                <tr><td>"Only requisitions of $100K or more are in scope. Escalation rate divides by in-scope, not all PRs."</td><td>Semantic View metric <code>escalation_rate</code> + agent instructions</td><td>Q1 (44.1%, not 29.2%)</td></tr>
+                <tr><td>"Auto-clear only if all five checks pass: reference present, vendor matches, fully executed, within term, within authorized value."</td><td>View <code>REQUISITION_CONTRACT_CHECK</code> + tool <code>CHECK_REQUISITION</code></td><td>Q2</td></tr>
+                <tr><td>"Use the supplier on the requisition, not the contract, for vendor breakdowns."</td><td>Semantic View dimension description</td><td>Q2 and Tier 1 rollups</td></tr>
+                <tr><td>"Procurement Review Policy is the source of truth for definitions."</td><td>Cortex Search <code>FINANCE_DOCS_SEARCH</code></td><td>Q3, with citation</td></tr>
+                <tr><td>"Tier 1 escalations go to the Director of Procurement."</td><td>Response instructions + <code>escalation_route</code> column</td><td>Routing line in every answer</td></tr>
+                <tr><td>"The agent is read-only. It never approves or rejects."</td><td>Orchestration instructions (guardrail)</td><td>Refusal language</td></tr>
+            </table>
+        </div>
+
+        <h3>See the business dictionary (no SQL)</h3>
+        <p>Open <strong>AI &amp; ML &rarr; Cortex Analyst</strong> (Semantic Views) and compare <strong>PROCUREMENT_SV_BASIC</strong> with <strong>PROCUREMENT_SV</strong>. In the basic one, <code>status</code> is just a column. In the full one it says <em>"Executed means signed by both parties. Pending Signature is NOT executed."</em> That sentence came from a person who knows the process.</p>
+
+        <h3>See the decision table (optional SQL)</h3>
+        <div class="code-label">Try it in a worksheet</div>
+        <div class="code-block">SELECT review_outcome, exception_reason, COUNT(*) AS requisitions, SUM(amount) AS dollars
+FROM sofi_finance_l300.agents.requisition_contract_check
+GROUP BY 1, 2
+ORDER BY 1, 3 DESC;</div>
+
+        <div class="note-purple"><strong>A real finding in the data.</strong> Ask the Procurement Review Assistant: <em>"Why were all of Ironbridge Security's Q3 requisitions escalated?"</em> Every one cites addendum C-1015, which is still <strong>Pending Signature</strong>, instead of the executed MSA. A Procurement lead would fix that at the source: get C-1015 signed, or re-reference the MSA. That's the kind of insight you can bring to a data engineer: <em>"The agent should also flag when a vendor's PRs keep referencing an unsigned addendum."</em></div>
+
+        <div class="note"><strong>With CoCo (optional, faster):</strong> Open CoCo in a Workspace and paste:
+            <div class="prompt-block" style="margin-top:8px;">Profile SOFI_FINANCE_L300.AGENTS.REQUISITION_CONTRACT_CHECK. List every column whose business meaning is ambiguous from the name alone, and draft a one-line definition for each that I should confirm with Procurement.</div>
+            CoCo drafts the glossary; you correct it. That's the division of labor you want with engineering too.
+        </div>
+    </div>
+</div>
+
+<div class="section" id="multi-agent">
+    <div class="stop">
+        <div class="stop-header"><span class="stop-num">4</span><span class="stop-title">Multi-Agent and CoWork</span><span class="stop-tag tag-cowork">CoWork</span><span class="stop-tag tag-ai">Multi-Agent</span><span class="stop-time">6 min</span></div>
+        <p>Real Finance questions cross domains. Instead of one giant agent, build <strong>specialists</strong> (each owned by the team that knows the domain) and a <strong>coordinator</strong> that reuses them. In CoWork, choose <strong>Finance Assistant (Multi-Agent)</strong> and ask:</p>
+        <div class="prompt-block">Give me a Q3 2026 Finance risk summary: which Tier 1 vendors had procurement escalations, and did any entity have unusual cash movements?</div>
+        <p style="margin-top:12px;">Watch the reasoning panel: it calls the Procurement tools <em>and</em> the Treasury tools, then combines them. Expected: 3 Tier 1 vendors with escalations (Ironbridge Security 8, Harbor Payments Tech 6, Meridian Data Systems 2), plus 3 cash outliers in Q3 (Bank Operating Jul 31, Broker-Dealer Aug 19, Tech Platform Sep 8).</p>
+
+        <div class="note-amber"><strong>Why this matters for your request.</strong> In our first build, this exact question returned the <em>wrong</em> Tier 1 totals. The coordinator looked up vendor tier through the <em>contract's</em> vendor, so every vendor-mismatch PR was credited to the wrong supplier. The fix was one business sentence: <em>"For any vendor or tier breakdown, use the supplier on the requisition."</em> Nobody on the engineering side could have known that without asking.</div>
+
+        <h3>Try a follow-up, then make it yours</h3>
+        <ul>
+            <li><strong>Chart it:</strong> <em>"Chart escalated dollars by vendor tier by month."</em></li>
+            <li><strong>Save &amp; share:</strong> save the answer as an <strong>Artifact</strong> and share it with a colleague.</li>
+            <li><strong>Automate it:</strong> ask CoWork to deliver the Finance risk summary every Monday at 8am as an <strong>Automation</strong>.</li>
+            <li><strong>Give feedback:</strong> use thumbs up/down with a comment. That feedback is how engineers find the next gap after launch.</li>
+        </ul>
+
+        <h3>Forecasting &amp; anomaly detection: a preview</h3>
+        <p>Ask the <strong>Treasury Liquidity Monitor</strong>: <em>"Were there any unusual daily cash movements since April 2026?"</em> It finds the four seeded outliers using a simple rolling statistical screen (3+ standard deviations from the trailing 30-day mean). It's a screen, not a forecast.</p>
+        <div class="note">For cash-flow forecasting or augmenting TM1 driver-based forecasts, engineers would add a <strong>Snowflake ML</strong> forecasting or anomaly-detection model as another tool on this same agent. Your request stays the same shape: <em>what to predict, at what grain, over what horizon, what counts as unusual, and who acts on it.</em> A dedicated ML workshop will go deeper.</div>
+    </div>
+</div>
+
+<div class="section" id="rewrite">
+    <div class="stop">
+        <div class="stop-header"><span class="stop-num">5</span><span class="stop-title">Exercise 2: Fix the Vague Request</span><span class="stop-tag tag-exercise">Exercise</span><span class="stop-time">7 min</span></div>
+        <p>This is the request that produced the Basic agent:</p>
+        <div class="prompt-block"><em>"Build an agent that checks POs against contracts."</em></div>
+        <p style="margin-top:12px;">In pairs (or solo), rewrite it by answering the six prompts below in one or two lines each. Use what you saw in Steps 2 to 4.</p>
+        <ol>
+            <li><strong>Who and why:</strong> who uses it, in which decision, how often?</li>
+            <li><strong>Definitions:</strong> which terms need a precise meaning? (e.g. "in scope," "executed," "escalation rate")</li>
+            <li><strong>Rules:</strong> write the decision as <em>if &rarr; then &rarr; owner</em>.</li>
+            <li><strong>Sources of truth:</strong> which systems and documents are authoritative? Which field wins when two disagree?</li>
+            <li><strong>Guardrails:</strong> what must it never do or say? Who can see what?</li>
+            <li><strong>Golden questions:</strong> three questions with the exact answer you'd expect.</li>
+        </ol>
+        <details class="reveal">
+            <summary>Reveal: the request that produced the Procurement Review Assistant</summary>
+            <div>
+                <p style="margin-top:8px;"><strong>Who and why:</strong> Procurement reviewers and Strategic Finance, daily, deciding whether a Coupa PR/change order &ge; $100K can be auto-cleared or needs full review. Goal: cut manual review of ~6,000 approvals a year while lowering control exposure.</p>
+                <p><strong>Definitions:</strong> In scope = amount &ge; $100,000. Executed = signed by both parties; Pending Signature is not executed. Authorized value = MSA + executed addendums only. Escalation rate = escalations &divide; in-scope PRs.</p>
+                <p><strong>Rules:</strong> Auto-clear only if all five pass: contract reference present; PR supplier = contract supplier; contract executed; PR date within contract term; cumulative committed &le; authorized value. Any failure &rarr; Escalate. Tier 1 &rarr; Director of Procurement; others &rarr; Procurement queue. Change orders count toward cumulative spend.</p>
+                <p><strong>Sources of truth:</strong> Coupa for requisitions, Ironclad for contracts, Procurement Review Policy for definitions. For vendor breakdowns, use the supplier on the requisition.</p>
+                <p><strong>Guardrails:</strong> Read-only; never approve, reject, or edit. Always cite the policy section. State the time-period assumption when a question is ambiguous.</p>
+                <p><strong>Golden questions:</strong> Q3 2026 escalation rate &rarr; 44.1% (26/59). PR-260017 &rarr; Escalate, vendor mismatch. "Does a pending addendum count toward authorized value?" &rarr; No, Policy &sect;3.</p>
+            </div>
+        </details>
+        <div class="note-green"><strong>Poll:</strong> Your facilitator will show three sample requests. For each, vote: <em>Could an engineer build this without scheduling a meeting?</em></div>
+    </div>
+</div>
+
+<div class="section" id="brief">
+    <div class="stop">
+        <div class="stop-header"><span class="stop-num">6</span><span class="stop-title">Exercise 3: Write Your Agent Request Brief</span><span class="stop-tag tag-exercise">Exercise</span><span class="stop-tag tag-coco">CoCo optional</span><span class="stop-time">13 min</span></div>
+        <p>Now do it for a workflow <strong>you</strong> own. Open the <a href="assets/templates/L300_Agent_Request_Brief_Template.md" download="L300_Agent_Request_Brief_Template.md">Agent Request Brief template</a> and fill in at least sections 1, 3, and 6. Pick something narrow: one decision, one team. Starter ideas from this group's use-case list:</p>
+        <div class="table-wrap">
+            <table>
+                <tr><th>Team</th><th>Workflow</th><th>Likely agent parts</th></tr>
+                <tr><td>Accounting</td><td>QoQ flux analysis with commentary drafts, by TDM (invest, lending, crypto, leases)</td><td>Semantic View + threshold rules + AI_COMPLETE narrative</td></tr>
+                <tr><td>Accounting / Strat Fin</td><td>Invoice fields extracted for accruals and forecasting</td><td>AI_EXTRACT pipeline (L200) + Semantic View</td></tr>
+                <tr><td>Strat Fin</td><td>Weekly forecast narrative vs actuals and reforecast</td><td>Semantic View + response template; ML forecast later</td></tr>
+                <tr><td>Treasury / Capital Markets</td><td>CPR/CDR, loan pool metrics, actuals vs estimates for ALCO</td><td>Semantic View + outlier rules + multi-agent</td></tr>
+                <tr><td>Competitive Strategy / IR</td><td>Peer earnings vs consensus, analyst sentiment</td><td>Cortex Search over transcripts + AI_SENTIMENT (L200)</td></tr>
+                <tr><td>Internal Audit / SOX</td><td>Complaints monitoring; PBC evidence for SOX testing</td><td>Search + classification + strict access rules</td></tr>
+            </table>
+        </div>
+
+        <h3>Test one golden question live</h3>
+        <p>Write one golden question for your workflow, with the answer you expect. If it touches procurement or treasury, ask the Finance Assistant in CoWork and mark it pass/fail. If not, ask it anyway: how the agent says "I don't have that" tells you exactly what your brief needs to supply.</p>
+
+        <div class="note"><strong>With CoCo (optional):</strong> CoCo can draft parts of your brief from real data. Try:
+            <div class="prompt-block" style="margin-top:8px;">Look at SOFI_FINANCE_L300.AGENTS.REQUISITION_CONTRACT_CHECK and draft 10 golden questions a Procurement manager would ask, each with the SQL that computes the expected answer and the answer itself.</div>
+            <div class="prompt-block" style="margin-top:8px;">Check REQUISITIONS and CONTRACTS for data quality problems an agent would stumble on: missing references, duplicates, values outside expected ranges. Summarize them as questions I should ask the data owner.</div>
+            Without CoCo, fill in the same sections from the template by hand. Every section has a worked example.
+        </div>
+
+        <div class="note-green"><strong>Share-out (last 7 minutes):</strong> Two volunteers read their brief. The facilitator plays the data engineer and asks the questions a real engineer would. Every question they have to ask is a line to add to the brief.</div>
+    </div>
+</div>
+
+<div class="section" id="codify">
+    <h2>Codify and Share Your Knowledge</h2>
+    <p>The best Finance-to-engineering handoffs treat business knowledge as a <strong>versioned artifact</strong> that maps directly onto what engineers build, not as a meeting. Six artifacts cover almost everything:</p>
+    <div class="table-wrap">
+        <table>
+            <tr><th>Your knowledge</th><th>Write it as</th><th>Engineer turns it into</th></tr>
+            <tr><td>What terms and metrics mean</td><td><strong>Business glossary:</strong> term, definition, formula, owner, source table</td><td>Semantic View descriptions, synonyms, metrics</td></tr>
+            <tr><td>What the right answer is</td><td><strong>Golden questions:</strong> question, expected answer, how to verify</td><td>Verified queries + agent evaluation set</td></tr>
+            <tr><td>How decisions get made</td><td><strong>Decision table:</strong> condition &rarr; outcome &rarr; owner, plus exceptions</td><td>Custom tools, views, instructions</td></tr>
+            <tr><td>Which documents to trust</td><td><strong>Source register:</strong> document, owner, refresh cadence, what's superseded</td><td>Cortex Search service + filters</td></tr>
+            <tr><td>Who may see and do what</td><td><strong>Access matrix:</strong> persona &times; data &times; allowed actions</td><td>Roles, masking and row access policies</td></tr>
+            <tr><td>What good looks like</td><td><strong>Response guide + acceptance criteria:</strong> sample answer, must-never list, pass threshold</td><td>Response instructions; evaluation before publishing</td></tr>
+        </table>
+    </div>
+    <h3>Working agreements that make it stick</h3>
+    <ul>
+        <li><strong>One brief per agent, one named business owner.</strong> Keep it where engineers work (a shared doc or repo), versioned, not buried in email.</li>
+        <li><strong>Start narrow.</strong> One decision and ~10 golden questions that pass beats "a Finance agent."</li>
+        <li><strong>Definitions follow the data.</strong> Confirm definitions against real rows. That's where the "which vendor field?" surprises show up.</li>
+        <li><strong>Golden questions are the contract.</strong> The agent ships when an agreed share of them pass, and they're re-run after every change.</li>
+        <li><strong>Launch is the start.</strong> CoWork feedback and new questions flow back into the brief; the business owner reviews them monthly.</li>
+        <li><strong>Say what it must not do.</strong> Read-only, no approvals, who can see PII: guardrails belong in the request, not left for the build.</li>
+    </ul>
+</div>
+
+<div class="section" id="next-steps">
+    <h2>Recap &amp; What's Next</h2>
+    <p>Level 300 finished the series by moving you from <strong>consumer</strong> and <strong>builder</strong> to <strong>specifier</strong>. The difference between the Basic agent's confident wrong answer and the Assistant's correct, cited one was a page of business knowledge. That page is now yours to write.</p>
+    <div class="table-wrap">
+        <table>
+            <tr><th>Level</th><th>Focus</th><th>What You Did</th></tr>
+            <tr><td><strong>Level 100</strong></td><td>Platform orientation &amp; Cortex AI as a consumer</td><td>Used CoCo and CoWork against a pre-built finance dataset</td></tr>
+            <tr><td><strong>Level 200</strong></td><td>Document intelligence &amp; AI Functions</td><td>Turned invoices, contracts, transcripts, and audio into tables with 9 AI Functions</td></tr>
+            <tr><td><strong>Level 300</strong> (Today)</td><td>Agents, multi-agent &amp; writing requirements</td><td>Graded two agents, traced answers to business knowledge, and drafted an Agent Request Brief</td></tr>
+            <tr><td><strong>Coming up</strong></td><td>Snowflake ML for Finance</td><td>Forecasting and anomaly detection (cash flow, liquidity, TM1 augmentation)</td></tr>
+        </table>
+    </div>
+    <h3>Your next three steps</h3>
+    <ol>
+        <li>Finish your brief this week and send it to your data engineering partner with your 10 golden questions.</li>
+        <li>Agree on the pass threshold and the business owner before the build starts.</li>
+        <li>After launch, use CoWork feedback to log misses and add them to the golden questions.</li>
+    </ol>
+</div>
+
+</div>
+
+<div class="footer">
+    Snowflake Solutions Engineering, SoFi Finance AI Champions Workshop, Level 300
+</div>
+
+<script>
+// Active nav highlighting on scroll
+var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-bar a'));
+function onScroll() {
+    var pos = window.scrollY + 80;
+    var current = sections[0];
+    sections.forEach(function (s) { if (s.offsetTop <= pos) current = s; });
+    navLinks.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+    });
+}
+window.addEventListener('scroll', onScroll);
+onScroll();
+</script>
+
+</body>
+</html>
